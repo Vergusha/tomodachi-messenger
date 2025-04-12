@@ -1,4 +1,4 @@
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase/firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
@@ -69,6 +69,26 @@ export const createOrGetChat = async (currentUserId: string, otherUserId: string
     return newChatRef.id;
   } catch (error) {
     console.error('Error creating/getting chat:', error);
+    throw error;
+  }
+};
+
+export const deleteChat = async (chatId: string) => {
+  try {
+    // Удаляем все сообщения чата
+    const messagesRef = collection(db, 'chats', chatId, 'messages');
+    const messagesSnapshot = await getDocs(messagesRef);
+    
+    // Удаляем каждое сообщение
+    const deletePromises = messagesSnapshot.docs.map(doc => deleteDoc(doc.ref));
+    await Promise.all(deletePromises);
+    
+    // Удаляем сам чат
+    await deleteDoc(doc(db, 'chats', chatId));
+    
+    return true;
+  } catch (error) {
+    console.error('Error deleting chat:', error);
     throw error;
   }
 }; 

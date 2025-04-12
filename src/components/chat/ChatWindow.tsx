@@ -18,7 +18,8 @@ import {
   Image as ImageIcon,
   EmojiEmotions as EmojiIcon,
   AttachFile as AttachIcon,
-  ArrowBack as ArrowBackIcon
+  ArrowBack as ArrowBackIcon,
+  Delete
 } from '@mui/icons-material';
 import {
   collection,
@@ -37,6 +38,7 @@ import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import UserProfile from '../profile/UserProfile';
 import { UserProfile as UserProfileType } from '../../types';
+import { DeleteChatDialog } from './DeleteChatDialog';
 
 interface ChatWindowProps {
   chatId: string | null;
@@ -60,6 +62,7 @@ const ChatWindow = ({ chatId, recipientId }: ChatWindowProps) => {
   const { currentUser } = useAuth();
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
   const [isSending, setIsSending] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   // Theme and responsive design setup
   const theme = useTheme();
@@ -370,6 +373,15 @@ const ChatWindow = ({ chatId, recipientId }: ChatWindowProps) => {
             {recipientProfile?.isOnline ? 'Online' : 'Offline'}
           </Typography>
         </Box>
+        
+        <Tooltip title="Удалить чат">
+          <IconButton 
+            color="error" 
+            onClick={() => setIsDeleteDialogOpen(true)}
+          >
+            <Delete />
+          </IconButton>
+        </Tooltip>
       </Paper>
 
       {/* Chat messages with improved styling and width control */}
@@ -640,6 +652,12 @@ const ChatWindow = ({ chatId, recipientId }: ChatWindowProps) => {
         onClose={() => setShowProfile(false)} 
         userId={recipientId} 
         isChatActive={true}
+      />
+
+      <DeleteChatDialog
+        open={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        chatId={chatId}
       />
     </Box>
   );
