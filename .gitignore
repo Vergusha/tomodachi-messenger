@@ -33,7 +33,6 @@ dist-ssr
 .env.*.local
 
 # Configuration files with API keys
-/src/supabaseConfig.ts
 /src/firebase/config.ts
 /src/supabase/config.ts
 
