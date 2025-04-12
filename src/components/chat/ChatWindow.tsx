@@ -33,7 +33,7 @@ import {
   serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
-import { db } from '../../firebase/config';
+import { db } from '../../firebase/config.ts';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatDistanceToNow, format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { ru } from 'date-fns/locale';

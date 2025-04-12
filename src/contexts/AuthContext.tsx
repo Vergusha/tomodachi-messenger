@@ -11,9 +11,9 @@ import {
   EmailAuthProvider,
   reauthenticateWithCredential
 } from 'firebase/auth';
-import { auth, db } from '../firebase/config';
+import { auth, db } from '../firebase/config.ts';
 import { doc, setDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { supabase, AVATARS_BUCKET } from '../supabaseConfig';
+import { supabase, AVATARS_BUCKET } from '../supabaseConfig.ts';
 
 interface AuthContextType {
   currentUser: User | null;
