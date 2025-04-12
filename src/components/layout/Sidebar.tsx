@@ -26,7 +26,13 @@ import {
 } from '@mui/icons-material';
 import { collection, query, where, getDocs, limit, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config.ts';
-import { UserSearchResult, Chat, UserProfile } from '../../types';
+import { Chat, UserProfile } from '../../types';
+import type { UserSearchResult as BaseUserSearchResult } from '../../types';
+
+// Extended interface to include lastSeen
+interface UserSearchResult extends BaseUserSearchResult {
+  lastSeen?: Date | string | number | any;
+}
 import { useAuth } from '../../contexts/AuthContext';
 import { formatDistanceToNow, isToday, isYesterday, format } from 'date-fns';
 import { ru } from 'date-fns/locale';

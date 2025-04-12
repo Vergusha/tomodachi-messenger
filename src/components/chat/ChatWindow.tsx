@@ -10,8 +10,7 @@ import {
   Tooltip,
   Badge,
   useTheme,
-  useMediaQuery,
-  Container
+  useMediaQuery
 } from '@mui/material';
 import { 
   Send as SendIcon,
@@ -64,7 +63,6 @@ const ChatWindow = ({ chatId, recipientId }: ChatWindowProps) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isLargeScreen = useMediaQuery(theme.breakpoints.up('xl'));
-  const isExtraLargeScreen = useMediaQuery('(min-width:1800px)');
   
   // Scroll to bottom when messages change
   useEffect(() => {
