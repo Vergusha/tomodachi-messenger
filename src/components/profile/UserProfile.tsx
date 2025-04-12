@@ -14,6 +14,7 @@ import { Close as CloseIcon, Person as PersonIcon } from '@mui/icons-material';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { UserProfile as UserProfileType } from '../../types';
+import { format, isToday, isYesterday } from 'date-fns';
 
 interface UserProfileProps {
   open: boolean;
@@ -22,6 +23,24 @@ interface UserProfileProps {
   onStartChat?: () => void;
   isChatActive?: boolean;
 }
+
+const formatLastSeen = (lastSeen: any): string => {
+  if (!lastSeen) return 'не в сети';
+  
+  try {
+    const date = lastSeen.toDate ? lastSeen.toDate() : new Date(lastSeen);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'был(а) в сети только что';
+    if (diffInMinutes < 60) return `был(а) в сети ${diffInMinutes} мин назад`;
+    if (isToday(date)) return `был(а) в сети сегодня в ${format(date, 'HH:mm')}`;
+    if (isYesterday(date)) return `был(а) в сети вчера в ${format(date, 'HH:mm')}`;
+    return `был(а) в сети ${format(date, 'dd.MM в HH:mm')}`;
+  } catch (e) {
+    return 'не в сети';
+  }
+};
 
 const UserProfile = ({ open, onClose, userId, onStartChat, isChatActive = false }: UserProfileProps) => {
   const [user, setUser] = useState<UserProfileType | null>(null);
@@ -153,6 +172,9 @@ const UserProfile = ({ open, onClose, userId, onStartChat, isChatActive = false 
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 @{user.username}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                {user.isOnline ? 'в сети' : formatLastSeen(user.lastSeen)}
               </Typography>
               
               {!isChatActive && onStartChat && (

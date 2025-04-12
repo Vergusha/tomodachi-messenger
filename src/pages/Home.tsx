@@ -114,7 +114,7 @@ const Home = () => {
       flexDirection: 'column', 
       height: '100vh',
       overflow: 'hidden',
-      width: '100%',
+      width: '100vw',
       bgcolor: 'background.default'
     }}>
       <Header openMobileMenu={isMobile ? handleDrawerToggle : undefined} />
@@ -124,9 +124,7 @@ const Home = () => {
         flexGrow: 1, 
         overflow: 'hidden',
         position: 'relative',
-        width: '100%',
-        maxWidth: isLargeScreen ? '1800px' : '100%',
-        mx: 'auto'
+        width: '100%'
       }}>
         {/* Sidebar for desktop */}
         {!isMobile && (

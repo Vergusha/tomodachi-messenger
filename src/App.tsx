@@ -130,8 +130,8 @@ const Root = () => {
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <Box sx={{
-          minHeight: '100vh',
-          width: '100%',
+          height: '100vh',
+          width: '100vw',
           bgcolor: 'background.default',
           display: 'flex',
           flexDirection: 'column',

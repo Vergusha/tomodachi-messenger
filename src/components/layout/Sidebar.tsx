@@ -28,7 +28,7 @@ import { collection, query, where, getDocs, limit, doc, getDoc } from 'firebase/
 import { db } from '../../firebase/config.ts';
 import { UserSearchResult, Chat, UserProfile } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, isToday, isYesterday, format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 interface SidebarProps {
@@ -216,6 +216,24 @@ const Sidebar = ({
     }
   };
 
+  const formatLastSeen = (lastSeen: any): string => {
+    if (!lastSeen) return 'не в сети';
+    
+    try {
+      const date = lastSeen.toDate ? lastSeen.toDate() : new Date(lastSeen);
+      const now = new Date();
+      const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+      
+      if (diffInMinutes < 1) return 'только что';
+      if (diffInMinutes < 60) return `${diffInMinutes} мин назад`;
+      if (isToday(date)) return `сегодня в ${format(date, 'HH:mm')}`;
+      if (isYesterday(date)) return `вчера в ${format(date, 'HH:mm')}`;
+      return format(date, 'dd.MM в HH:mm');
+    } catch (e) {
+      return 'не в сети';
+    }
+  };
+
   // Clear search results
   const clearSearch = () => {
     setSearchQuery('');
@@ -385,14 +403,17 @@ const Sidebar = ({
                   }}
                 />
                 <Typography 
-                  variant="caption" 
+                  variant="body2" 
+                  color={user.isOnline ? "success.main" : "text.secondary"}
                   sx={{ 
-                    color: user.isOnline ? 'success.main' : 'text.secondary',
-                    fontWeight: user.isOnline ? 'medium' : 'normal',
-                    fontSize: '0.7rem'
+                    display: 'flex', 
+                    alignItems: 'center',
+                    fontSize: isMobile ? '0.75rem' : '0.875rem'
                   }}
                 >
-                  {user.isOnline ? 'в сети' : ''}
+                  {user.isOnline 
+                    ? 'в сети' 
+                    : formatLastSeen(user.lastSeen)}
                 </Typography>
               </ListItem>
             ))}

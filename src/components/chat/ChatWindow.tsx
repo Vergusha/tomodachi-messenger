@@ -188,12 +188,14 @@ const ChatWindow = ({ chatId, recipientId }: ChatWindowProps) => {
     
     try {
       const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      const now = new Date();
+      const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
       
-      if (isToday(date)) {
-        return format(date, 'HH:mm');
-      } else {
-        return format(date, 'dd.MM.yyyy HH:mm');
-      }
+      if (diffInMinutes < 1) return 'только что';
+      if (diffInMinutes < 60) return `${diffInMinutes} мин назад`;
+      if (isToday(date)) return format(date, 'HH:mm');
+      if (isYesterday(date)) return `вчера в ${format(date, 'HH:mm')}`;
+      return format(date, 'dd.MM.yyyy HH:mm');
     } catch (e) {
       return '';
     }
@@ -260,13 +262,6 @@ const ChatWindow = ({ chatId, recipientId }: ChatWindowProps) => {
       </Box>
     );
   }
-
-  // Calculate optimal content width for different screen sizes
-  const getContentWidth = () => {
-    if (isExtraLargeScreen) return '70%';
-    if (isLargeScreen) return '85%';
-    return '100%';
-  };
 
   return (
     <Box
@@ -369,15 +364,13 @@ const ChatWindow = ({ chatId, recipientId }: ChatWindowProps) => {
           bgcolor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(248,248,252,0.8)'
         }}
       >
-        <Container
-          disableGutters={isMobile}
-          maxWidth={false}
+        <Box
           sx={{ 
-            width: getContentWidth(),
-            mx: 'auto',
+            width: '100%',
             height: '100%',
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            px: { xs: 0, sm: 2, md: 4, lg: 6, xl: 8 }
           }}
         >
           {loading ? (
@@ -444,7 +437,7 @@ const ChatWindow = ({ chatId, recipientId }: ChatWindowProps) => {
                         p: 1.5,
                         px: 2,
                         maxWidth: isMobile ? '85%' : isLargeScreen ? '50%' : '70%', 
-                        borderRadius: 2.5,
+                        borderRadius: message.senderId === currentUser?.uid ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
                         bgcolor: message.senderId === currentUser?.uid 
                           ? theme.palette.mode === 'dark' ? 'primary.dark' : 'primary.main'
                           : theme.palette.mode === 'dark' ? 'background.paper' : '#F0F0F0',
@@ -494,7 +487,7 @@ const ChatWindow = ({ chatId, recipientId }: ChatWindowProps) => {
             </Box>
           )}
           <div ref={messagesEndRef} />
-        </Container>
+        </Box>
       </Box>
 
       {/* Message input with improved styling */}
@@ -518,15 +511,14 @@ const ChatWindow = ({ chatId, recipientId }: ChatWindowProps) => {
           handleSend();
         }}
       >
-        <Container
-          disableGutters={isMobile}
-          maxWidth={false}
+        <Box
           sx={{ 
-            width: getContentWidth(),
+            width: '100%',
             mx: 'auto',
             display: 'flex',
             alignItems: 'center',
-            gap: 0.5
+            gap: 0.5,
+            px: { xs: 0, sm: 2, md: 4, lg: 6, xl: 8 }
           }}
         >
           {!isMobile && (
@@ -616,7 +608,7 @@ const ChatWindow = ({ chatId, recipientId }: ChatWindowProps) => {
           >
             <SendIcon fontSize={isMobile ? "small" : "medium"} />
           </IconButton>
-        </Container>
+        </Box>
       </Paper>
       
       {/* User Profile Dialog */}
