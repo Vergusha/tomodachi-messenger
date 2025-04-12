@@ -25,20 +25,20 @@ interface UserProfileProps {
 }
 
 const formatLastSeen = (lastSeen: any): string => {
-  if (!lastSeen) return 'не в сети';
+  if (!lastSeen) return 'offline';
   
   try {
     const date = lastSeen.toDate ? lastSeen.toDate() : new Date(lastSeen);
     const now = new Date();
     const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
     
-    if (diffInMinutes < 1) return 'был(а) в сети только что';
-    if (diffInMinutes < 60) return `был(а) в сети ${diffInMinutes} мин назад`;
-    if (isToday(date)) return `был(а) в сети сегодня в ${format(date, 'HH:mm')}`;
-    if (isYesterday(date)) return `был(а) в сети вчера в ${format(date, 'HH:mm')}`;
-    return `был(а) в сети ${format(date, 'dd.MM в HH:mm')}`;
+    if (diffInMinutes < 1) return 'was online just now';
+    if (diffInMinutes < 60) return `was online ${diffInMinutes} min ago`;
+    if (isToday(date)) return `was online today at ${format(date, 'HH:mm')}`;
+    if (isYesterday(date)) return `was online yesterday at ${format(date, 'HH:mm')}`;
+    return `was online ${format(date, 'dd.MM at HH:mm')}`;
   } catch (e) {
-    return 'не в сети';
+    return 'offline';
   }
 };
 
@@ -63,11 +63,11 @@ const UserProfile = ({ open, onClose, userId, onStartChat, isChatActive = false 
         if (userDoc.exists()) {
           setUser(userDoc.data() as UserProfileType);
         } else {
-          setError('Пользователь не найден');
+          setError('User not found');
         }
       } catch (err) {
-        console.error('Ошибка при загрузке данных пользователя:', err);
-        setError('Не удалось загрузить информацию о пользователе');
+        console.error('Error loading user data:', err);
+        setError('Failed to load user information');
       } finally {
         setLoading(false);
       }
@@ -127,7 +127,7 @@ const UserProfile = ({ open, onClose, userId, onStartChat, isChatActive = false 
           </Box>
         ) : user ? (
           <Box>
-            {/* Верхняя часть с большой аватаркой */}
+            {/* Top section with large avatar */}
             <Box sx={{ 
               backgroundColor: 'primary.light',
               pt: 8,
@@ -161,7 +161,7 @@ const UserProfile = ({ open, onClose, userId, onStartChat, isChatActive = false 
               </Box>
             </Box>
             
-            {/* Информация о пользователе */}
+            {/* User information */}
             <Box sx={{ 
               px: 3,
               pt: 10,
@@ -174,7 +174,7 @@ const UserProfile = ({ open, onClose, userId, onStartChat, isChatActive = false 
                 @{user.username}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                {user.isOnline ? 'в сети' : formatLastSeen(user.lastSeen)}
+                {user.isOnline ? 'online' : formatLastSeen(user.lastSeen)}
               </Typography>
               
               {!isChatActive && onStartChat && (
@@ -185,13 +185,13 @@ const UserProfile = ({ open, onClose, userId, onStartChat, isChatActive = false 
                   startIcon={<PersonIcon />}
                   sx={{ mb: 3 }}
                 >
-                  Начать общение
+                  Start conversation
                 </Button>
               )}
               
               <Divider sx={{ my: 2 }} />
               
-              {/* Информация из профиля */}
+              {/* Profile information */}
               {user.bio ? (
                 <Box sx={{ px: 2, mb: 2 }}>
                   <Typography variant="body1" align="center" paragraph>
@@ -200,13 +200,13 @@ const UserProfile = ({ open, onClose, userId, onStartChat, isChatActive = false 
                 </Box>
               ) : (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Пользователь не добавил информацию о себе
+                  User did not add information about themselves
                 </Typography>
               )}
               
               <Box sx={{ mb: 2 }}>
                 <Typography variant="caption" color="text.secondary">
-                  В Tomodachi с {new Date(user.createdAt).toLocaleDateString()}
+                  Joined Tomodachi on {new Date(user.createdAt).toLocaleDateString()}
                 </Typography>
               </Box>
             </Box>

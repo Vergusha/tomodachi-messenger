@@ -86,19 +86,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await reauthenticateWithCredential(currentUser, credential);
       return true;
     } catch (error) {
-      console.error('Ошибка реаутентификации:', error);
+      console.error('Reauthentication error:', error);
       return false;
     }
   }
 
   // Delete user account and all associated data
   async function deleteAccount(password: string): Promise<void> {
-    if (!currentUser) throw new Error("Пользователь не авторизован");
+    if (!currentUser) throw new Error("User is not authorized");
     
     // Reauthenticate user before deleting account
     const isAuthenticated = await reauthenticate(password);
     if (!isAuthenticated) {
-      throw new Error("Неверный пароль");
+      throw new Error("Invalid password");
     }
     
     try {
@@ -130,23 +130,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Delete user's profile images in Supabase Storage
       try {
-        // Supabase storage имеет другой синтаксис для удаления файлов
+        // Supabase storage has a different syntax for file deletion
         const { error } = await supabase
           .storage
           .from(AVATARS_BUCKET)
           .list(`${currentUser.uid}`);
 
         if (error) {
-          console.error('Ошибка при поиске файлов в Supabase:', error);
+          console.error('Error searching files in Supabase:', error);
         } else {
-          // Получаем список файлов и удаляем их
+          // Get list of files and delete them
           const { data, error: listError } = await supabase
             .storage
             .from(AVATARS_BUCKET)
             .list(`${currentUser.uid}`);
             
           if (listError) {
-            console.error('Ошибка при получении списка файлов:', listError);
+            console.error('Error getting file list:', listError);
           } else if (data && data.length > 0) {
             const filesToRemove = data.map((file: { name: string }) => `${currentUser.uid}/${file.name}`);
             
@@ -156,12 +156,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .remove(filesToRemove);
               
             if (deleteError) {
-              console.error('Ошибка при удалении файлов:', deleteError);
+              console.error('Error deleting files:', deleteError);
             }
           }
         }
       } catch (error) {
-        console.error('Ошибка при удалении файлов пользователя:', error);
+        console.error('Error deleting user files:', error);
         // Continue with account deletion even if storage deletion fails
       }
       
@@ -171,8 +171,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Finally delete the user account itself
       await deleteUser(currentUser);
     } catch (error) {
-      console.error('Ошибка при удалении аккаунта:', error);
-      throw new Error("Не удалось удалить аккаунт. Пожалуйста, попробуйте позже.");
+      console.error('Error deleting account:', error);
+      throw new Error("Failed to delete account. Please try again later.");
     }
   }
 

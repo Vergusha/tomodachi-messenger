@@ -123,87 +123,84 @@ const Sidebar = ({
 
   // Handle search for users by username
   const handleSearch = async () => {
-    if (!searchQuery.trim() || !currentUser) return;
+    if (!searchQuery.trim()) return;
+    
+    setIsSearching(true);
     
     try {
-      setIsSearching(true);
-      setSearchResults([]);
+      // Convert search query to lowercase to match storage format
+      const normalizedQuery = searchQuery.toLowerCase();
       
-      // Преобразуем поисковый запрос в нижний регистр для соответствия формату хранения
-      const searchLower = searchQuery.toLowerCase();
-      
-      // Используем более простой запрос без orderBy для устранения проблем с индексацией
+      // Use a simpler query without orderBy to avoid indexing issues
       const usersQuery = query(
         collection(db, 'users'),
-        where('username', '>=', searchLower),
+        where('username', '>=', normalizedQuery),
         limit(10)
       );
       
       const querySnapshot = await getDocs(usersQuery);
       const results: UserSearchResult[] = [];
       
+      // Filter results by partial username match
       querySnapshot.forEach((doc) => {
         const userData = doc.data();
-        // Фильтруем результаты по частичному совпадению имени пользователя
-        if (doc.id !== currentUser.uid && 
-            userData.username.includes(searchLower)) {
+        
+        if (doc.id !== currentUser?.uid && 
+            userData.username.includes(normalizedQuery)) {
           results.push({
             uid: doc.id,
-            username: userData.originalUsername || userData.username,
-            displayName: userData.displayName || userData.username,
-            photoURL: userData.photoURL,
-            isOnline: userData.isOnline || false
-          });
+            ...userData
+          } as UserSearchResult);
         }
       });
       
-      // Если нет результатов, пробуем поискать по displayName
+      // If no results, try searching by displayName
       if (results.length === 0) {
         const displayNameQuery = query(
           collection(db, 'users'),
-          limit(20)
+          where('displayName', '>=', normalizedQuery),
+          limit(10)
         );
         
         const displayNameSnapshot = await getDocs(displayNameQuery);
+        
         displayNameSnapshot.forEach((doc) => {
           const userData = doc.data();
-          // Проверяем имя пользователя или отображаемое имя
-          if (doc.id !== currentUser.uid && 
+          
+          // Check username or display name
+          if (doc.id !== currentUser?.uid && 
               ((userData.displayName && 
-                userData.displayName.toLowerCase().includes(searchLower)) || 
-               userData.username.includes(searchLower))) {
+                userData.displayName.toLowerCase().includes(normalizedQuery)) || 
+               userData.username.includes(normalizedQuery))) {
             
             const alreadyAdded = results.some(r => r.uid === doc.id);
+            
             if (!alreadyAdded) {
               results.push({
                 uid: doc.id,
-                username: userData.originalUsername || userData.username,
-                displayName: userData.displayName || userData.username,
-                photoURL: userData.photoURL,
-                isOnline: userData.isOnline || false
-              });
+                ...userData
+              } as UserSearchResult);
             }
           }
         });
       }
       
-      // Сортируем результаты по релевантности
+      // Sort results by relevance
       results.sort((a, b) => {
-        // Sort online users first
         if (a.isOnline && !b.isOnline) return -1;
         if (!a.isOnline && b.isOnline) return 1;
         
-        const aMatch = (a.username.toLowerCase().indexOf(searchLower) >= 0) ? 
-                      a.username.toLowerCase().indexOf(searchLower) : Infinity;
-        const bMatch = (b.username.toLowerCase().indexOf(searchLower) >= 0) ? 
-                      b.username.toLowerCase().indexOf(searchLower) : Infinity;
+        const aMatch = (a.username.toLowerCase().indexOf(normalizedQuery) >= 0) ? 
+                      a.username.toLowerCase().indexOf(normalizedQuery) : Infinity;
+        const bMatch = (b.username.toLowerCase().indexOf(normalizedQuery) >= 0) ? 
+                      b.username.toLowerCase().indexOf(normalizedQuery) : Infinity;
         return aMatch - bMatch;
       });
       
       setSearchResults(results);
       
       if (results.length === 0) {
-        console.log('Поиск не дал результатов для:', searchQuery);
+        console.log('No results found for:', searchQuery);
       }
     } catch (error) {
       console.error('Error searching users:', error);
@@ -223,20 +220,20 @@ const Sidebar = ({
   };
 
   const formatLastSeen = (lastSeen: any): string => {
-    if (!lastSeen) return 'не в сети';
+    if (!lastSeen) return 'offline';
     
     try {
       const date = lastSeen.toDate ? lastSeen.toDate() : new Date(lastSeen);
       const now = new Date();
       const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
       
-      if (diffInMinutes < 1) return 'только что';
-      if (diffInMinutes < 60) return `${diffInMinutes} мин назад`;
-      if (isToday(date)) return `сегодня в ${format(date, 'HH:mm')}`;
-      if (isYesterday(date)) return `вчера в ${format(date, 'HH:mm')}`;
-      return format(date, 'dd.MM в HH:mm');
+      if (diffInMinutes < 1) return 'just now';
+      if (diffInMinutes < 60) return `${diffInMinutes} min ago`;
+      if (isToday(date)) return `today at ${format(date, 'HH:mm')}`;
+      if (isYesterday(date)) return `yesterday at ${format(date, 'HH:mm')}`;
+      return format(date, 'dd.MM at HH:mm');
     } catch (e) {
-      return 'не в сети';
+      return 'offline';
     }
   };
 
@@ -282,7 +279,7 @@ const Sidebar = ({
         }}
       >
         <TextField
-          placeholder="Поиск пользователей..."
+          placeholder="Search users..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
@@ -339,7 +336,7 @@ const Sidebar = ({
           }}>
             <PersonSearchIcon sx={{ fontSize: 18, mr: 1, color: 'primary.main' }} />
             <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              Результаты поиска
+              Search Results
             </Typography>
           </Box>
           <List disablePadding sx={{ maxHeight: '40%', overflow: 'auto' }}>
@@ -418,7 +415,7 @@ const Sidebar = ({
                   }}
                 >
                   {user.isOnline 
-                    ? 'в сети' 
+                    ? 'online' 
                     : formatLastSeen(user.lastSeen)}
                 </Typography>
               </ListItem>
@@ -438,7 +435,7 @@ const Sidebar = ({
       }}>
         <ChatIcon sx={{ fontSize: 18, mr: 1, color: 'primary.main' }} />
         <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-          Сообщения
+          Messages
         </Typography>
       </Box>
       
@@ -539,7 +536,7 @@ const Sidebar = ({
                     </Badge>
                   </ListItemAvatar>
                   <ListItemText 
-                    primary={recipient?.displayName || recipient?.username || 'Пользователь'}
+                    primary={recipient?.displayName || recipient?.username || 'User'}
                     secondary={
                       <Box component="span" sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Typography 
@@ -563,7 +560,7 @@ const Sidebar = ({
                         >
                           {chat.lastMessage 
                             ? chat.lastMessage.text
-                            : 'Начните диалог'}
+                            : 'Start conversation'}
                         </Typography>
                         
                         {chat.lastMessage && (
@@ -600,10 +597,10 @@ const Sidebar = ({
             <Box sx={{ p: 3, textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               <ChatIcon sx={{ fontSize: 60, color: 'text.disabled', mx: 'auto', mb: 2, opacity: 0.5 }} />
               <Typography color="text.secondary" variant="body2" sx={{ mb: 1 }}>
-                У вас пока нет сообщений
+                No messages yet
               </Typography>
               <Typography color="text.secondary" variant="caption">
-                Найдите пользователей, чтобы начать общение!
+                Find users to start chatting!
               </Typography>
             </Box>
           )}

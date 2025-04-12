@@ -212,10 +212,10 @@ const ChatWindow = ({ chatId, recipientId }: ChatWindowProps) => {
       const now = new Date();
       const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
       
-      if (diffInMinutes < 1) return 'только что';
-      if (diffInMinutes < 60) return `${diffInMinutes} мин назад`;
+      if (diffInMinutes < 1) return 'just now';
+      if (diffInMinutes < 60) return `${diffInMinutes} min ago`;
       if (isToday(date)) return format(date, 'HH:mm');
-      if (isYesterday(date)) return `вчера в ${format(date, 'HH:mm')}`;
+      if (isYesterday(date)) return `yesterday at ${format(date, 'HH:mm')}`;
       return format(date, 'dd.MM.yyyy HH:mm');
     } catch (e) {
       return '';
@@ -251,9 +251,9 @@ const ChatWindow = ({ chatId, recipientId }: ChatWindowProps) => {
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
     
     if (isToday(date)) {
-      return 'Сегодня';
+      return 'Today';
     } else if (isYesterday(date)) {
-      return 'Вчера';
+      return 'Yesterday';
     } else {
       return format(date, 'd MMMM yyyy', { locale: ru });
     }
@@ -278,7 +278,7 @@ const ChatWindow = ({ chatId, recipientId }: ChatWindowProps) => {
         }}
       >
         <Typography variant="h6" color="text.secondary">
-          Выберите чат или найдите пользователя для общения
+          Select a chat or find a user to start messaging
         </Typography>
       </Box>
     );
@@ -356,7 +356,7 @@ const ChatWindow = ({ chatId, recipientId }: ChatWindowProps) => {
         
         <Box sx={{ flexGrow: 1 }}>
           <Typography variant={isMobile ? "body1" : "subtitle1"} sx={{ fontWeight: 'medium' }}>
-            {recipientProfile?.displayName || recipientProfile?.username || 'Пользователь'}
+            {recipientProfile?.displayName || recipientProfile?.username || 'User'}
           </Typography>
           <Typography 
             variant="body2" 
@@ -367,7 +367,7 @@ const ChatWindow = ({ chatId, recipientId }: ChatWindowProps) => {
               fontSize: isMobile ? '0.75rem' : '0.875rem'
             }}
           >
-            {recipientProfile?.isOnline ? 'В сети' : 'Не в сети'}
+            {recipientProfile?.isOnline ? 'Online' : 'Offline'}
           </Typography>
         </Box>
       </Paper>
@@ -505,7 +505,7 @@ const ChatWindow = ({ chatId, recipientId }: ChatWindowProps) => {
           ) : (
             <Box sx={{ textAlign: 'center', mt: 4 }}>
               <Typography variant="body2" color="text.secondary">
-                Нет сообщений. Начните общение прямо сейчас!
+                No messages yet. Start the conversation now!
               </Typography>
             </Box>
           )}
@@ -583,7 +583,7 @@ const ChatWindow = ({ chatId, recipientId }: ChatWindowProps) => {
           
           <TextField
             fullWidth
-            placeholder="Написать сообщение..."
+            placeholder="Type a message..."
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyPress={handleKeyPress}
@@ -610,7 +610,7 @@ const ChatWindow = ({ chatId, recipientId }: ChatWindowProps) => {
             color="primary"
             onClick={handleSend}
             disabled={!newMessage.trim()}
-            aria-label="отправить сообщение"
+            aria-label="send message"
             size={isMobile ? "medium" : "large"}
             sx={{
               ml: 0.5,

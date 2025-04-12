@@ -15,6 +15,10 @@ import { Crop } from '@mui/icons-material';
 import RotateRightIcon from '@mui/icons-material/RotateRight';
 import { processImageForUpload, validateImageFile, uploadProfileImage } from '../../utils/imageService';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase, AVATARS_BUCKET } from '../../supabaseConfig';
+import { updateUserProfile } from '../../lib/userService';
+import { Cropper } from 'react-cropper';
+import { PhotoCamera } from '@mui/icons-material';
 
 interface AvatarEditorProps {
   open: boolean;
@@ -29,22 +33,24 @@ const AvatarEditor = ({ open, onClose, onComplete }: AvatarEditorProps) => {
   const [loading, setLoading] = useState(false);
   const [zoom, setZoom] = useState<number>(1);
   const [rotation, setRotation] = useState<number>(0);
+  const [croppedImage, setCroppedImage] = useState<Blob | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { currentUser } = useAuth();
   
-  // Открываем диалог выбора файла при первом открытии
+  // Open file selection dialog on first open
   useEffect(() => {
     if (open && fileInputRef.current && !selectedFile) {
       fileInputRef.current.click();
     }
   }, [open, selectedFile]);
   
-  // Очищаем состояние при закрытии
+  // Clear state on close
   useEffect(() => {
     if (!open) {
       setSelectedFile(null);
-      setPreviewUrl(null);
+      setCroppedImage(null);
       setError(null);
       setZoom(1);
       setRotation(0);
@@ -82,13 +88,10 @@ const AvatarEditor = ({ open, onClose, onComplete }: AvatarEditorProps) => {
   };
   
   const handleSave = async () => {
-    if (!selectedFile || !currentUser) return;
-    
-    setLoading(true);
-    setError(null);
+    if (!currentUser || !selectedFile) return;
     
     try {
-      // Обработка изображения (обрезка и сжатие)
+      // Image processing (cropping and compression)
       const processedImage = await processImageForUpload(selectedFile, {
         maxWidth: 300,
         maxHeight: 300,
@@ -96,141 +99,115 @@ const AvatarEditor = ({ open, onClose, onComplete }: AvatarEditorProps) => {
         aspectRatio: 1
       });
       
-      // Загрузка в Firebase Storage
-      const downloadUrl = await uploadProfileImage(currentUser.uid, processedImage);
+      // Upload to Supabase Storage
+      const { data, error } = await supabase
+        .storage
+        .from(AVATARS_BUCKET)
+        .upload(`${currentUser.uid}/avatar.jpg`, processedImage, {
+          cacheControl: '3600',
+          upsert: true
+        });
       
-      // Обновление профиля пользователя
-      onComplete(downloadUrl);
-      onClose();
+      if (error) throw error;
+      
+      // Get public URL
+      const { data: publicUrlData } = supabase
+        .storage
+        .from(AVATARS_BUCKET)
+        .getPublicUrl(`${currentUser.uid}/avatar.jpg`);
+      
+      if (publicUrlData?.publicUrl) {
+        await updateUserProfile(currentUser.displayName || '', publicUrlData.publicUrl);
+        onComplete(publicUrlData.publicUrl);
+        onClose();
+      }
     } catch (err) {
-      console.error('Ошибка при сохранении аватара:', err);
-      setError('Не удалось сохранить изображение. Пожалуйста, попробуйте снова.');
-    } finally {
-      setLoading(false);
+      console.error('Error saving avatar:', err);
+      setError('Failed to save avatar. Please try again.');
     }
   };
   
   return (
-    <Dialog 
-      open={open} 
-      onClose={loading ? () => {} : onClose}
-      maxWidth="sm" 
-      fullWidth={true}
-    >
-      <DialogTitle>Обновить аватар профиля</DialogTitle>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>Update Profile Avatar</DialogTitle>
       <DialogContent>
-        <input
-          type="file"
-          accept="image/*"
-          hidden
-          ref={fileInputRef}
-          onChange={handleFileChange}
-        />
-        
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
         
-        {previewUrl ? (
-          <>
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'center', 
-              mb: 2,
-              overflow: 'hidden', 
-              borderRadius: '50%',
-              width: 200, 
-              height: 200,
-              mx: 'auto',
-              border: '2px solid',
-              borderColor: 'primary.main',
-              position: 'relative'
-            }}>
-              <Box
-                component="img"
-                src={previewUrl}
-                sx={{
-                  width: `${100 * zoom}%`,
-                  height: `${100 * zoom}%`,
-                  objectFit: 'cover',
-                  transform: `rotate(${rotation}deg) scale(${zoom})`,
-                  transformOrigin: 'center',
-                  transition: 'transform 0.2s'
-                }}
-              />
-            </Box>
-            
-            <Box sx={{ mt: 3, px: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Crop sx={{ mr: 2, color: 'primary.main' }} />
-                <Typography gutterBottom>Масштаб</Typography>
+        <Box sx={{ width: '100%', textAlign: 'center' }}>
+          {selectedFile ? (
+            <>
+              <Box sx={{ position: 'relative', height: 300, mb: 2 }}>
+                <Cropper
+                  image={selectedFile}
+                  crop={crop}
+                  zoom={zoom}
+                  rotation={rotation}
+                  aspect={1}
+                  onCropChange={setCrop}
+                  onZoomChange={setZoom}
+                  onRotationChange={setRotation}
+                />
               </Box>
-              <Slider
-                value={zoom}
-                min={0.5}
-                max={2}
-                step={0.01}
-                onChange={handleZoomChange}
-                disabled={loading}
-              />
-            </Box>
-            
-            <Box sx={{ mt: 3, px: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <RotateRightIcon sx={{ mr: 2, color: 'primary.main' }} />
-                <Typography gutterBottom>Поворот</Typography>
+              
+              <Box sx={{ px: 2 }}>
+                <Typography gutterBottom>Scale</Typography>
+                <Slider
+                  value={zoom}
+                  min={1}
+                  max={3}
+                  step={0.1}
+                  onChange={(e, value) => setZoom(value as number)}
+                />
+                
+                <Typography gutterBottom>Rotation</Typography>
+                <Slider
+                  value={rotation}
+                  min={0}
+                  max={360}
+                  step={1}
+                  onChange={(e, value) => setRotation(value as number)}
+                />
               </Box>
-              <Slider
-                value={rotation}
-                min={0}
-                max={360}
-                step={1}
-                onChange={handleRotationChange}
-                disabled={loading}
-              />
-            </Box>
-          </>
-        ) : (
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center',
-            flexDirection: 'column',
-            p: 4, 
-            backgroundColor: 'background.default',
-            borderRadius: 2
-          }}>
-            <Typography variant="body1" sx={{ mb: 2, textAlign: 'center' }}>
-              Выберите изображение для аватара.
+            </>
+          ) : (
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+              Select an image for your avatar.
             </Typography>
-            <Button 
-              variant="contained" 
-              color="primary"
-              onClick={handleSelectAgain}
-              disabled={loading}
-            >
-              Выбрать изображение
-            </Button>
-          </Box>
-        )}
+          )}
+          
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+          />
+          
+          <Button
+            variant="outlined"
+            onClick={() => fileInputRef.current?.click()}
+            startIcon={<PhotoCamera />}
+          >
+            Select Image
+          </Button>
+        </Box>
       </DialogContent>
+      
       <DialogActions>
-        <Button 
-          onClick={onClose}
-          disabled={loading}
-          color="inherit"
-        >
-          Отмена
+        <Button onClick={onClose} color="inherit">
+          Cancel
         </Button>
         <Button
           onClick={handleSave}
-          disabled={!previewUrl || loading}
-          variant="contained"
           color="primary"
+          disabled={!selectedFile || loading}
+          startIcon={loading && <CircularProgress size={20} />}
         >
-          {loading ? <CircularProgress size={24} /> : 'Сохранить'}
+          {loading ? <CircularProgress size={24} /> : 'Save'}
         </Button>
       </DialogActions>
     </Dialog>

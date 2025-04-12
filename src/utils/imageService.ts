@@ -3,21 +3,22 @@ import { db } from '../firebase/firebaseConfig';
 import { supabase, AVATARS_BUCKET } from '../supabaseConfig';
 
 /**
- * Валидация файла изображения
+ * Image file validation
  */
+
+// Check file type
 export const validateImageFile = (file: File): string | null => {
-  // Проверка типа файла
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-  if (!allowedTypes.includes(file.type)) {
-    return 'Пожалуйста, выберите изображение в формате JPEG, PNG, GIF или WEBP';
+  const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  if (!validTypes.includes(file.type)) {
+    return 'Please select an image in JPEG, PNG, GIF or WEBP format';
   }
 
-  // Проверка размера файла (максимум 2MB)
-  const maxSize = 2 * 1024 * 1024; // 2MB
+  // Check file size (maximum 2MB)
+  const maxSize = 2 * 1024 * 1024; // 2MB in bytes
   if (file.size > maxSize) {
-    return 'Размер изображения не должен превышать 2MB';
+    return 'Image size should not exceed 2MB';
   }
-  
+
   return null;
 };
 

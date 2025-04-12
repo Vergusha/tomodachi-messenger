@@ -11,7 +11,8 @@ import {
   Divider,
   Tooltip,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  ListItemIcon
 } from '@mui/material';
 import {
   ExitToApp as LogoutIcon, 
@@ -164,15 +165,17 @@ const Header = ({ openMobileMenu }: HeaderProps) => {
             open={Boolean(anchorEl)}
             onClose={handleMenuClose}
             PaperProps={{
-              elevation: 3,
-              sx: { 
-                minWidth: 200,
-                borderRadius: 2,
-                mt: 0.5,
+              elevation: 0,
+              sx: {
                 overflow: 'visible',
-                boxShadow: isDarkMode 
-                  ? '0 4px 20px rgba(0,0,0,0.3)'
-                  : '0 2px 10px rgba(0,0,0,0.1)',
+                filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
+                mt: 1.5,
+                '& .MuiAvatar-root': {
+                  width: 32,
+                  height: 32,
+                  ml: -0.5,
+                  mr: 1,
+                },
                 '&:before': {
                   content: '""',
                   display: 'block',
@@ -185,50 +188,25 @@ const Header = ({ openMobileMenu }: HeaderProps) => {
                   transform: 'translateY(-50%) rotate(45deg)',
                   zIndex: 0,
                 },
-              }
+              },
             }}
             transformOrigin={{ horizontal: 'right', vertical: 'top' }}
             anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
           >
-            <Box sx={{ py: 1, px: 2 }}>
-              <Typography variant="subtitle1" fontWeight="bold">
-                {currentUser?.displayName || 'User'}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-word' }}>
-                {currentUser?.email}
-              </Typography>
-            </Box>
-            
-            <Divider />
-            
-            <MenuItem 
-              onClick={handleProfile} 
-              sx={{ 
-                py: 1.5,
-                transition: 'background-color 0.2s ease',
-                '&:hover': {
-                  backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.04)'
-                }
-              }}
-            >
-              <ProfileIcon sx={{ mr: 2 }} />
-              Мой профиль
+            <MenuItem onClick={handleProfile}>
+              <ListItemIcon>
+                <ProfileIcon fontSize="small" />
+              </ListItemIcon>
+              My Profile
             </MenuItem>
             
             <Divider />
             
-            <MenuItem 
-              onClick={handleLogout} 
-              sx={{ 
-                py: 1.5,
-                transition: 'background-color 0.2s ease',
-                '&:hover': {
-                  backgroundColor: isDarkMode ? 'rgba(255,20,60,0.1)' : 'rgba(255,0,0,0.04)'
-                }
-              }}
-            >
-              <LogoutIcon sx={{ mr: 2 }} />
-              Выйти
+            <MenuItem onClick={handleLogout}>
+              <ListItemIcon>
+                <LogoutIcon fontSize="small" />
+              </ListItemIcon>
+              Logout
             </MenuItem>
           </Menu>
         </Box>
