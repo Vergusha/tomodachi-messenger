@@ -1,0 +1,50 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment variables and API keys
+.env
+.env.*
+.env.local
+.env.development
+.env.test
+.env.production
+.env.*.local
+
+# Configuration files with API keys
+/src/supabaseConfig.ts
+/src/firebase/config.ts
+/src/supabase/config.ts
+**/config.ts
+
+# Firebase
+.firebase/
+firebase-debug.log
+firebaserc
+firebase-adminsdk.json
+
+# Local Supabase setup
+/supabase/.branches
+/supabase/.temp
+/supabase/.env
