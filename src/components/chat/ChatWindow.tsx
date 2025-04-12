@@ -10,7 +10,8 @@ import {
   Tooltip,
   Badge,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Fade
 } from '@mui/material';
 import { 
   Send as SendIcon,
@@ -58,6 +59,7 @@ const ChatWindow = ({ chatId, recipientId }: ChatWindowProps) => {
   const [showProfile, setShowProfile] = useState(false);
   const { currentUser } = useAuth();
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
+  const [isSending, setIsSending] = useState(false);
   
   // Theme and responsive design setup
   const theme = useTheme();
@@ -128,10 +130,19 @@ const ChatWindow = ({ chatId, recipientId }: ChatWindowProps) => {
   }, [recipientId]);
 
   const handleSend = async () => {
-    if (!newMessage.trim() || !currentUser) return;
+    if (!newMessage.trim() || !currentUser || isSending) return;
     
     const messageText = newMessage.trim();
     setNewMessage('');
+    setIsSending(true);
+    
+    const optimisticMessage: Message = {
+      id: 'temp-' + Date.now(),
+      senderId: currentUser.uid,
+      text: messageText,
+      timestamp: new Date(),
+      read: false
+    };
     
     try {
       // If no chatId, create a new chat first
@@ -150,8 +161,11 @@ const ChatWindow = ({ chatId, recipientId }: ChatWindowProps) => {
       
       if (!activeChatId) return;
       
+      // Add optimistic message to the state
+      setMessages(prev => [...prev, optimisticMessage]);
+      
       // Add message to the chat
-      await addDoc(collection(db, `chats/${activeChatId}/messages`), {
+      const messageRef = await addDoc(collection(db, `chats/${activeChatId}/messages`), {
         senderId: currentUser.uid,
         text: messageText,
         timestamp: serverTimestamp(),
@@ -168,8 +182,17 @@ const ChatWindow = ({ chatId, recipientId }: ChatWindowProps) => {
         },
         updatedAt: serverTimestamp()
       });
+      
+      // Remove optimistic message and add real one
+      setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
+      
     } catch (error) {
       console.error('Error sending message:', error);
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
+      setNewMessage(messageText); // Restore message text
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -377,105 +400,107 @@ const ChatWindow = ({ chatId, recipientId }: ChatWindowProps) => {
             </Box>
           ) : messages.length > 0 ? (
             messages.map((message, index) => (
-              <Box key={message.id}>
-                {/* Date separator */}
-                {shouldShowDateSeparator(message, index) && (
+              <Fade in={true} key={message.id}>
+                <Box>
+                  {/* Date separator */}
+                  {shouldShowDateSeparator(message, index) && (
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        my: 2
+                      }}
+                    >
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          px: 2,
+                          py: 0.5,
+                          borderRadius: 4,
+                          bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'
+                        }}
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          {formatDateSeparator(message.timestamp)}
+                        </Typography>
+                      </Paper>
+                    </Box>
+                  )}
+                  
+                  {/* Message bubble */}
                   <Box
                     sx={{
                       display: 'flex',
-                      justifyContent: 'center',
-                      my: 2
+                      justifyContent: message.senderId === currentUser?.uid ? 'flex-end' : 'flex-start',
+                      mb: 1,
+                      px: isMobile ? 0.5 : 1
                     }}
                   >
-                    <Paper
-                      elevation={0}
-                      sx={{
-                        px: 2,
-                        py: 0.5,
-                        borderRadius: 4,
-                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'
-                      }}
-                    >
-                      <Typography variant="caption" color="text.secondary">
-                        {formatDateSeparator(message.timestamp)}
-                      </Typography>
-                    </Paper>
-                  </Box>
-                )}
-                
-                {/* Message bubble */}
-                <Box
-                  sx={{
-                    display: 'flex',
-                    justifyContent: message.senderId === currentUser?.uid ? 'flex-end' : 'flex-start',
-                    mb: 1,
-                    px: isMobile ? 0.5 : 1
-                  }}
-                >
-                  {message.senderId !== currentUser?.uid && (
-                    <Avatar
-                      src={recipientProfile?.photoURL || ''}
-                      alt={recipientProfile?.displayName || 'User'}
-                      sx={{ 
-                        mr: 1, 
-                        width: isMobile ? 28 : 32, 
-                        height: isMobile ? 28 : 32,
-                        opacity: 0.9
-                      }}
-                      onClick={handleShowProfile}
-                    >
-                      {recipientProfile?.displayName?.[0] || '?'}
-                    </Avatar>
-                  )}
-                  
-                  <Tooltip title={getTooltipTime(message.timestamp)} placement="top" arrow>
-                    <Paper
-                      elevation={1}
-                      sx={{
-                        p: 1.5,
-                        px: 2,
-                        maxWidth: isMobile ? '85%' : isLargeScreen ? '50%' : '70%', 
-                        borderRadius: message.senderId === currentUser?.uid ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
-                        bgcolor: message.senderId === currentUser?.uid 
-                          ? theme.palette.mode === 'dark' ? 'primary.dark' : 'primary.main'
-                          : theme.palette.mode === 'dark' ? 'background.paper' : '#F0F0F0',
-                        color: message.senderId === currentUser?.uid 
-                          ? 'primary.contrastText' 
-                          : theme.palette.mode === 'dark' ? 'text.primary' : 'text.primary',
-                        position: 'relative',
-                        boxShadow: theme.palette.mode === 'dark' ? 2 : 1,
-                        transition: 'transform 0.1s ease-in-out',
-                        '&:hover': {
-                          transform: 'translateY(-1px)',
-                          boxShadow: 2
-                        }
-                      }}
-                    >
-                      <Typography 
-                        variant="body1" 
+                    {message.senderId !== currentUser?.uid && (
+                      <Avatar
+                        src={recipientProfile?.photoURL || ''}
+                        alt={recipientProfile?.displayName || 'User'}
                         sx={{ 
-                          wordBreak: 'break-word',
-                          fontSize: isMobile ? '0.9rem' : '1rem'
+                          mr: 1, 
+                          width: isMobile ? 28 : 32, 
+                          height: isMobile ? 28 : 32,
+                          opacity: 0.9
                         }}
+                        onClick={handleShowProfile}
                       >
-                        {message.text}
-                      </Typography>
-                      <Typography
-                        variant="caption"
+                        {recipientProfile?.displayName?.[0] || '?'}
+                      </Avatar>
+                    )}
+                    
+                    <Tooltip title={getTooltipTime(message.timestamp)} arrow placement="top">
+                      <Paper
+                        elevation={1}
                         sx={{
-                          display: 'block',
-                          textAlign: 'right',
-                          mt: 0.5,
-                          opacity: 0.7,
-                          fontSize: '0.7rem'
+                          p: 1.5,
+                          px: 2,
+                          maxWidth: isMobile ? '85%' : isLargeScreen ? '50%' : '70%', 
+                          borderRadius: message.senderId === currentUser?.uid ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+                          bgcolor: message.senderId === currentUser?.uid 
+                            ? theme.palette.mode === 'dark' ? 'primary.dark' : 'primary.main'
+                            : theme.palette.mode === 'dark' ? 'background.paper' : '#F0F0F0',
+                          color: message.senderId === currentUser?.uid 
+                            ? 'primary.contrastText' 
+                            : theme.palette.mode === 'dark' ? 'text.primary' : 'text.primary',
+                          position: 'relative',
+                          boxShadow: theme.palette.mode === 'dark' ? 2 : 1,
+                          transition: 'transform 0.1s ease-in-out',
+                          '&:hover': {
+                            transform: 'translateY(-1px)',
+                            boxShadow: 2
+                          }
                         }}
                       >
-                        {formatMessageTime(message.timestamp)}
-                      </Typography>
-                    </Paper>
-                  </Tooltip>
+                        <Typography 
+                          variant="body1" 
+                          sx={{ 
+                            wordBreak: 'break-word',
+                            fontSize: isMobile ? '0.9rem' : '1rem'
+                          }}
+                        >
+                          {message.text}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            display: 'block',
+                            textAlign: 'right',
+                            mt: 0.5,
+                            opacity: 0.7,
+                            fontSize: '0.7rem'
+                          }}
+                        >
+                          {formatMessageTime(message.timestamp)}
+                        </Typography>
+                      </Paper>
+                    </Tooltip>
+                  </Box>
                 </Box>
-              </Box>
+              </Fade>
             ))
           ) : (
             <Box sx={{ textAlign: 'center', mt: 4 }}>
