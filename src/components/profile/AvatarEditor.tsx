@@ -13,12 +13,13 @@ import {
 } from '@mui/material';
 import { Crop } from '@mui/icons-material';
 import RotateRightIcon from '@mui/icons-material/RotateRight';
-import { processImageForUpload, validateImageFile, uploadProfileImage } from '../../utils/imageService';
+import { processImageForUpload, validateImageFile } from '../../utils/imageService';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase, AVATARS_BUCKET } from '../../supabaseConfig';
 import { updateUserProfile } from '../../lib/userService';
 import { Cropper } from 'react-cropper';
 import { PhotoCamera } from '@mui/icons-material';
+import 'cropperjs/dist/cropper.css';
 
 interface AvatarEditorProps {
   open: boolean;
@@ -33,8 +34,9 @@ const AvatarEditor = ({ open, onClose, onComplete }: AvatarEditorProps) => {
   const [loading, setLoading] = useState(false);
   const [zoom, setZoom] = useState<number>(1);
   const [rotation, setRotation] = useState<number>(0);
-  const [croppedImage, setCroppedImage] = useState<Blob | null>(null);
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [cropData, setCropData] = useState<any>(null);
+  const [isCropperReady, setIsCropperReady] = useState(false);
+  const cropperRef = useRef<any>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { currentUser } = useAuth();
@@ -50,7 +52,7 @@ const AvatarEditor = ({ open, onClose, onComplete }: AvatarEditorProps) => {
   useEffect(() => {
     if (!open) {
       setSelectedFile(null);
-      setCroppedImage(null);
+      setCropData(null);
       setError(null);
       setZoom(1);
       setRotation(0);
@@ -73,14 +75,6 @@ const AvatarEditor = ({ open, onClose, onComplete }: AvatarEditorProps) => {
     }
   };
   
-  const handleZoomChange = (_: Event, newValue: number | number[]) => {
-    setZoom(newValue as number);
-  };
-  
-  const handleRotationChange = (_: Event, newValue: number | number[]) => {
-    setRotation(newValue as number);
-  };
-  
   const handleSelectAgain = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
@@ -88,48 +82,91 @@ const AvatarEditor = ({ open, onClose, onComplete }: AvatarEditorProps) => {
   };
   
   const handleSave = async () => {
-    if (!currentUser || !selectedFile) return;
+    if (!currentUser || !selectedFile || !cropperRef.current) {
+      console.error('Missing required data:', { 
+        currentUser, 
+        selectedFile, 
+        cropperRef: !!cropperRef.current,
+        userId: currentUser?.uid,
+        isAuthenticated: !!currentUser
+      });
+      return;
+    }
     
     try {
-      // Image processing (cropping and compression)
-      const processedImage = await processImageForUpload(selectedFile, {
+      setLoading(true);
+      
+      // Получаем обрезанное изображение из cropper
+      const croppedCanvas = cropperRef.current.cropper.getCroppedCanvas({
+        width: 300,
+        height: 300
+      });
+      
+      if (!croppedCanvas) {
+        throw new Error('Не удалось получить обрезанное изображение');
+      }
+      
+      // Конвертируем canvas в Blob
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        croppedCanvas.toBlob((blob: Blob | null) => {
+          if (blob) resolve(blob);
+          else reject(new Error('Не удалось создать Blob из изображения'));
+        }, 'image/jpeg', 0.85);
+      });
+      
+      // Создаем File из Blob
+      const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+      
+      // Обрабатываем изображение
+      const processedImage = await processImageForUpload(file, {
         maxWidth: 300,
         maxHeight: 300,
         quality: 0.85,
         aspectRatio: 1
       });
       
-      // Upload to Supabase Storage
+      const filePath = `${currentUser.uid}/avatar.jpg`;
+      console.log('Uploading to path:', filePath);
+      
+      // Загружаем в Supabase Storage
       const { data, error } = await supabase
         .storage
         .from(AVATARS_BUCKET)
-        .upload(`${currentUser.uid}/avatar.jpg`, processedImage, {
+        .upload(filePath, processedImage, {
           cacheControl: '3600',
-          upsert: true
+          upsert: true,
+          contentType: 'image/jpeg'
         });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase upload error:', error);
+        throw new Error('Ошибка загрузки изображения: ' + error.message);
+      }
       
-      // Get public URL
+      // Получаем публичный URL
       const { data: publicUrlData } = supabase
         .storage
         .from(AVATARS_BUCKET)
-        .getPublicUrl(`${currentUser.uid}/avatar.jpg`);
+        .getPublicUrl(filePath);
       
       if (publicUrlData?.publicUrl) {
         await updateUserProfile(currentUser.displayName || '', publicUrlData.publicUrl);
         onComplete(publicUrlData.publicUrl);
         onClose();
+      } else {
+        throw new Error('Не удалось получить публичный URL изображения');
       }
     } catch (err) {
       console.error('Error saving avatar:', err);
-      setError('Failed to save avatar. Please try again.');
+      setError('Не удалось сохранить аватар. Пожалуйста, попробуйте снова.');
+    } finally {
+      setLoading(false);
     }
   };
   
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Update Profile Avatar</DialogTitle>
+      <DialogTitle>Редактор аватара</DialogTitle>
       <DialogContent>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -142,40 +179,63 @@ const AvatarEditor = ({ open, onClose, onComplete }: AvatarEditorProps) => {
             <>
               <Box sx={{ position: 'relative', height: 300, mb: 2 }}>
                 <Cropper
-                  image={selectedFile}
-                  crop={crop}
-                  zoom={zoom}
-                  rotation={rotation}
-                  aspect={1}
-                  onCropChange={setCrop}
-                  onZoomChange={setZoom}
-                  onRotationChange={setRotation}
+                  ref={cropperRef}
+                  src={previewUrl || ''}
+                  style={{ height: 300, width: '100%' }}
+                  aspectRatio={1}
+                  guides={true}
+                  cropBoxResizable={true}
+                  cropBoxMovable={true}
+                  zoomable={true}
+                  zoomOnWheel={true}
+                  zoomOnTouch={true}
+                  viewMode={1}
+                  minCropBoxWidth={100}
+                  minCropBoxHeight={100}
+                  background={false}
+                  responsive={true}
+                  autoCropArea={1}
+                  checkOrientation={false}
+                  onInitialized={(instance) => {
+                    cropperRef.current = instance;
+                    setIsCropperReady(true);
+                  }}
                 />
               </Box>
               
               <Box sx={{ px: 2 }}>
-                <Typography gutterBottom>Scale</Typography>
+                <Typography gutterBottom>Масштаб</Typography>
                 <Slider
                   value={zoom}
                   min={1}
                   max={3}
                   step={0.1}
-                  onChange={(e, value) => setZoom(value as number)}
+                  onChange={(_, value) => {
+                    setZoom(value as number);
+                    if (isCropperReady && cropperRef.current?.cropper) {
+                      cropperRef.current.cropper.zoomTo(value as number);
+                    }
+                  }}
                 />
                 
-                <Typography gutterBottom>Rotation</Typography>
+                <Typography gutterBottom>Поворот</Typography>
                 <Slider
                   value={rotation}
                   min={0}
                   max={360}
                   step={1}
-                  onChange={(e, value) => setRotation(value as number)}
+                  onChange={(_, value) => {
+                    setRotation(value as number);
+                    if (isCropperReady && cropperRef.current?.cropper) {
+                      cropperRef.current.cropper.rotateTo(value as number);
+                    }
+                  }}
                 />
               </Box>
             </>
           ) : (
             <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-              Select an image for your avatar.
+              Выберите изображение для аватара
             </Typography>
           )}
           
@@ -189,25 +249,25 @@ const AvatarEditor = ({ open, onClose, onComplete }: AvatarEditorProps) => {
           
           <Button
             variant="outlined"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={handleSelectAgain}
             startIcon={<PhotoCamera />}
           >
-            Select Image
+            Выбрать изображение
           </Button>
         </Box>
       </DialogContent>
       
       <DialogActions>
         <Button onClick={onClose} color="inherit">
-          Cancel
+          Отмена
         </Button>
         <Button
           onClick={handleSave}
           color="primary"
-          disabled={!selectedFile || loading}
+          disabled={!selectedFile || loading || !isCropperReady}
           startIcon={loading && <CircularProgress size={20} />}
         >
-          {loading ? <CircularProgress size={24} /> : 'Save'}
+          {loading ? 'Сохранение...' : 'Сохранить'}
         </Button>
       </DialogActions>
     </Dialog>
