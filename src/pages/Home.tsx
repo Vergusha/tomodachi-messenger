@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Box, useMediaQuery, useTheme, Drawer, Fab, SwipeableDrawer, Slide } from '@mui/material';
-import { Menu as MenuIcon, Chat as ChatIcon } from '@mui/icons-material';
+import { Box, useMediaQuery, useTheme, Fab, SwipeableDrawer, Slide } from '@mui/material';
+import { Menu as MenuIcon } from '@mui/icons-material';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-
 import Header from '../components/layout/Header';
 import Sidebar from '../components/layout/Sidebar';
 import ChatWindow from '../components/chat/ChatWindow';
@@ -18,11 +17,13 @@ const Home = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isLargeScreen = useMediaQuery(theme.breakpoints.up('xl'));
   const { currentUser } = useAuth();
   const { mode } = useThemeContext();
   const isDarkMode = mode === 'dark';
 
-  const drawerWidth = isSmallMobile ? '85%' : 320;
+  // Responsive drawer width based on screen size
+  const drawerWidth = isSmallMobile ? '85%' : isLargeScreen ? 380 : 320;
 
   // Listen for chat updates to keep sidebar in sync
   useEffect(() => {
@@ -113,6 +114,7 @@ const Home = () => {
       flexDirection: 'column', 
       height: '100vh',
       overflow: 'hidden',
+      width: '100%',
       bgcolor: 'background.default'
     }}>
       <Header openMobileMenu={isMobile ? handleDrawerToggle : undefined} />
@@ -121,7 +123,10 @@ const Home = () => {
         display: 'flex', 
         flexGrow: 1, 
         overflow: 'hidden',
-        position: 'relative'
+        position: 'relative',
+        width: '100%',
+        maxWidth: isLargeScreen ? '1800px' : '100%',
+        mx: 'auto'
       }}>
         {/* Sidebar for desktop */}
         {!isMobile && (
@@ -137,7 +142,7 @@ const Home = () => {
             <Sidebar 
               onChatSelect={handleChatSelect} 
               onUserSelect={handleUserSelect}
-              selectedChatId={selectedChatId}
+              selectedChatId={selectedChatId || undefined}
             />
           </Box>
         )}
@@ -163,7 +168,7 @@ const Home = () => {
             <Sidebar 
               onChatSelect={handleChatSelect} 
               onUserSelect={handleUserSelect}
-              selectedChatId={selectedChatId}
+              selectedChatId={selectedChatId || undefined}
               isMobileOpen={mobileOpen}
               onMobileClose={() => setMobileOpen(false)}
             />
@@ -176,7 +181,8 @@ const Home = () => {
           position: 'relative',
           height: '100%',
           display: 'flex',
-          flexDirection: 'column'
+          flexDirection: 'column',
+          width: '100%'
         }}>
           <ChatWindow chatId={selectedChatId} recipientId={recipientId} />
           

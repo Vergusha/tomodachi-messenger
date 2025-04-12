@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, createContext, useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, CssBaseline, Box, useMediaQuery } from '@mui/material';
 import { createAppTheme } from './theme';
@@ -10,9 +10,7 @@ import Home from './pages/Home';
 import ProfilePage from './pages/ProfilePage';
 import { useAuth } from './contexts/AuthContext';
 
-// Create a theme context to manage theme mode
-import { createContext, useContext } from 'react';
-
+// Define theme context type
 type ThemeContextType = {
   toggleColorMode: () => void;
   mode: 'light' | 'dark';

@@ -24,8 +24,8 @@ import {
   Chat as ChatIcon,
   PersonSearch as PersonSearchIcon
 } from '@mui/icons-material';
-import { collection, query, where, getDocs, limit, orderBy, doc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebase/config';
+import { collection, query, where, getDocs, limit, doc, getDoc } from 'firebase/firestore';
+import { db } from '../../firebase/config.ts';
 import { UserSearchResult, Chat, UserProfile } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
@@ -56,7 +56,6 @@ const Sidebar = ({
   const { currentUser } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
   const isDarkMode = theme.palette.mode === 'dark';
   
   // Load user's chats
@@ -79,7 +78,8 @@ const Sidebar = ({
         
         querySnapshot.forEach((doc) => {
           const chatData = doc.data() as Chat;
-          chatsList.push({ id: doc.id, ...chatData });
+          // Use spread first, then override id to ensure we use Firestore's document ID
+          chatsList.push({ ...chatData, id: doc.id });
           
           // Get recipient ID
           const recipientId = chatData.participants.find(id => id !== currentUser.uid);
@@ -238,14 +238,14 @@ const Sidebar = ({
 
   return (
     <Box sx={{ 
-      display: 'flex',
       flexDirection: 'column',
       height: '100%',
       width: '100%',
       backgroundColor: 'background.paper',
       borderRight: 1,
       borderColor: 'divider',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      display: isMobile && !isMobileOpen ? 'none' : 'flex'
     }}>
       {/* Search bar with improved styling */}
       <Paper 
@@ -322,7 +322,7 @@ const Sidebar = ({
             {searchResults.map((user) => (
               <ListItem 
                 key={user.uid}
-                button 
+                component="button"
                 onClick={() => {
                   onUserSelect(user);
                   if (isMobile && onMobileClose) onMobileClose();
@@ -441,8 +441,8 @@ const Sidebar = ({
               return (
                 <ListItem 
                   key={chat.id}
-                  button 
-                  selected={isSelected}
+                  component="button"
+                  disableGutters
                   onClick={() => handleChatSelect(chat.id, recipientId)}
                   sx={{ 
                     px: 2,
