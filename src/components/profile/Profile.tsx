@@ -1,4 +1,4 @@
-import { useState, useEffect, ChangeEvent } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -10,8 +10,6 @@ import {
   Divider,
   Alert,
   IconButton,
-  Grid,
-  AlertTitle,
   Dialog,
   DialogActions,
   DialogContent,
@@ -22,18 +20,15 @@ import {
   OutlinedInput,
   InputAdornment
 } from '@mui/material';
-import { 
+import {
   PhotoCamera as PhotoCameraIcon,
-  Save as SaveIcon, 
   Delete as DeleteIcon,
   Visibility,
-  VisibilityOff,
-  PhotoCamera
+  VisibilityOff
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebase/config';
+import { db } from '../../firebase/firebaseConfig';
 import { UserProfile } from '../../types';
 import AvatarEditor from './AvatarEditor';
 
@@ -50,7 +45,6 @@ const Profile = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showAvatarEditor, setShowAvatarEditor] = useState(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -96,25 +90,18 @@ const Profile = () => {
     }
   };
 
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      // This is where we would handle image upload to storage
-      // For now, just log that we'd process the image
-      console.log('Image selected:', e.target.files[0].name);
-    }
-  };
-
   const handleAvatarUpdate = async (photoURL: string) => {
-    setLoading(true);
-    setError('');
-    setSuccess(false);
-    
     try {
+      setLoading(true);
+      setError('');
+      setSuccess('');
+      
       await updateUserProfile(currentUser?.displayName || '', photoURL);
-      setSuccess(true);
+      setSuccess('Avatar updated successfully');
+      setShowAvatarEditor(false);
     } catch (error) {
-      setError('Не удалось обновить аватар');
-      console.error('Ошибка при обновлении аватара:', error);
+      setError('Failed to update avatar');
+      console.error('Error updating avatar:', error);
     } finally {
       setLoading(false);
     }
@@ -122,20 +109,20 @@ const Profile = () => {
 
   const handleDeleteAccount = async () => {
     if (!password.trim()) {
-      setError('Введите пароль');
+      setError('Please enter your password');
       return;
     }
     
-    setLoading(true);
-    setError('');
-    
     try {
+      setLoading(true);
+      setError('');
       await deleteAccount(password);
-      // После успешного удаления аккаунта, пользователь будет автоматически разлогинен
-      // и перенаправлен на страницу входа в AuthContext
+      // After successful deletion, user will be automatically logged out
+      // and redirected to login page by AuthContext
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Не удалось удалить аккаунт';
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete account';
       setError(errorMessage);
+    } finally {
       setLoading(false);
     }
   };
@@ -153,7 +140,7 @@ const Profile = () => {
       <Paper 
         elevation={3} 
         sx={{ 
-          p: 4, 
+          p: 4,
           borderRadius: 3,
           backgroundColor: 'background.paper'
         }}
@@ -161,21 +148,21 @@ const Profile = () => {
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
           <Box sx={{ position: 'relative' }}>
             <Avatar 
-              src={currentUser?.photoURL || ''} 
+              src={currentUser?.photoURL || ''}
               alt={displayName || 'Profile'}
               sx={{ 
-                width: 120, 
-                height: 120, 
-                border: '4px solid', 
-                borderColor: 'primary.main' 
+                width: 120,
+                height: 120,
+                border: '4px solid',
+                borderColor: 'primary.main'
               }}
             >
               {(displayName || '').charAt(0)}
             </Avatar>
-            <IconButton 
+            <IconButton
               color="primary"
               aria-label="upload picture"
-              component="label"
+              onClick={() => setShowAvatarEditor(true)}
               sx={{
                 position: 'absolute',
                 bottom: 0,
@@ -185,12 +172,11 @@ const Profile = () => {
                   backgroundColor: 'secondary.dark',
                 }
               }}
-              onClick={() => setShowAvatarEditor(true)}
             >
               <PhotoCameraIcon />
             </IconButton>
           </Box>
-          
+
           <Box sx={{ ml: 3 }}>
             <Typography variant="h4" fontWeight="bold">
               {displayName || username}
@@ -203,17 +189,17 @@ const Profile = () => {
             </Typography>
           </Box>
         </Box>
-        
+
         {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        
+
         <Divider sx={{ mb: 3, mt: 2 }} />
-        
+
         <form onSubmit={handleSubmit}>
           <Typography variant="h6" sx={{ mb: 2 }}>
             Profile Information
           </Typography>
-          
+
           <TextField
             label="Username"
             value={username}
@@ -225,7 +211,7 @@ const Profile = () => {
             helperText="Username cannot be changed"
             sx={{ mb: 2 }}
           />
-          
+
           <TextField
             label="Display Name"
             value={displayName}
@@ -235,7 +221,7 @@ const Profile = () => {
             variant="outlined"
             sx={{ mb: 2 }}
           />
-          
+
           <TextField
             label="Bio"
             value={bio}
@@ -247,13 +233,13 @@ const Profile = () => {
             rows={4}
             sx={{ mb: 3 }}
           />
-          
-          <Button 
-            type="submit" 
+
+          <Button
+            type="submit"
             variant="contained"
             color="primary"
             disabled={updating}
-            sx={{ 
+            sx={{
               py: 1.5,
               px: 4,
               fontWeight: 'medium'
@@ -264,37 +250,37 @@ const Profile = () => {
         </form>
 
         <Divider sx={{ my: 4 }} />
-        
+
         <Box>
           <Typography variant="h6" color="error" gutterBottom>
-            Опасная зона
+            Danger Zone
           </Typography>
-          
+
           <Typography variant="body2" paragraph color="text.secondary">
-            Удаление аккаунта - необратимое действие. Все ваши данные, сообщения и настройки будут удалены навсегда.
+            Deleting your account is irreversible. All your data, messages, and settings will be permanently deleted.
           </Typography>
-          
+
           <Button
             variant="outlined"
             color="error"
             startIcon={<DeleteIcon />}
             onClick={() => setShowDeleteDialog(true)}
           >
-            Удалить аккаунт
+            Delete Account
           </Button>
         </Box>
       </Paper>
-      
+
       <Dialog open={showDeleteDialog} onClose={() => setShowDeleteDialog(false)}>
-        <DialogTitle>Подтверждение удаления аккаунта</DialogTitle>
+        <DialogTitle>Confirm Account Deletion</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
-            Вы уверены, что хотите удалить свой аккаунт? Это действие невозможно отменить.
-            Все ваши данные, чаты и сообщения будут удалены навсегда.
+            Are you sure you want to delete your account? This action cannot be undone.
+            All your data, chats, and messages will be permanently deleted.
           </DialogContentText>
-          
+
           <FormControl fullWidth variant="outlined">
-            <InputLabel htmlFor="delete-password">Введите пароль для подтверждения</InputLabel>
+            <InputLabel htmlFor="delete-password">Enter password to confirm</InputLabel>
             <OutlinedInput
               id="delete-password"
               type={showPassword ? 'text' : 'password'}
@@ -303,7 +289,7 @@ const Profile = () => {
               endAdornment={
                 <InputAdornment position="end">
                   <IconButton
-                    aria-label="переключить видимость пароля"
+                    aria-label="toggle password visibility"
                     onClick={() => setShowPassword(!showPassword)}
                     edge="end"
                   >
@@ -311,25 +297,25 @@ const Profile = () => {
                   </IconButton>
                 </InputAdornment>
               }
-              label="Введите пароль для подтверждения"
+              label="Enter password to confirm"
             />
           </FormControl>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowDeleteDialog(false)} color="primary">
-            Отмена
+            Cancel
           </Button>
-          <Button 
+          <Button
             onClick={handleDeleteAccount}
             color="error"
             disabled={!password || loading}
             startIcon={loading ? <CircularProgress size={20} /> : <DeleteIcon />}
           >
-            Удалить аккаунт
+            Delete Account
           </Button>
         </DialogActions>
       </Dialog>
-      
+
       <AvatarEditor
         open={showAvatarEditor}
         onClose={() => setShowAvatarEditor(false)}

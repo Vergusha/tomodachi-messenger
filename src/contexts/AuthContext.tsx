@@ -11,9 +11,9 @@ import {
   EmailAuthProvider,
   reauthenticateWithCredential
 } from 'firebase/auth';
-import { auth, db } from '../firebase/config.ts';
+import { auth, db } from '../firebase/firebaseConfig';
 import { doc, setDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { supabase, AVATARS_BUCKET } from '../supabaseConfig.ts';
+import { supabase, AVATARS_BUCKET } from '../supabaseConfig';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -148,7 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (listError) {
             console.error('Ошибка при получении списка файлов:', listError);
           } else if (data && data.length > 0) {
-            const filesToRemove = data.map(file => `${currentUser.uid}/${file.name}`);
+            const filesToRemove = data.map((file: { name: string }) => `${currentUser.uid}/${file.name}`);
             
             const { error: deleteError } = await supabase
               .storage

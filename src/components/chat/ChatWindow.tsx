@@ -30,7 +30,7 @@ import {
   updateDoc,
   serverTimestamp
 } from 'firebase/firestore';
-import { db } from '../../firebase/config.ts';
+import { db } from '../../firebase/firebaseConfig.ts';
 import { useAuth } from '../../contexts/AuthContext';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { ru } from 'date-fns/locale';

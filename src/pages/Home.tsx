@@ -6,7 +6,7 @@ import Header from '../components/layout/Header';
 import Sidebar from '../components/layout/Sidebar';
 import ChatWindow from '../components/chat/ChatWindow';
 import { UserSearchResult } from '../types';
-import { db } from '../firebase/config';
+import { db } from '../firebase/firebaseConfig';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../App';
 

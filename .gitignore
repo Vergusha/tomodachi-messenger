@@ -36,7 +36,6 @@ dist-ssr
 /src/supabaseConfig.ts
 /src/firebase/config.ts
 /src/supabase/config.ts
-**/config.ts
 
 # Firebase
 .firebase/

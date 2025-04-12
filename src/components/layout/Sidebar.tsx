@@ -25,7 +25,7 @@ import {
   PersonSearch as PersonSearchIcon
 } from '@mui/icons-material';
 import { collection, query, where, getDocs, limit, doc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebase/config.ts';
+import { db } from '../../firebase/firebaseConfig.ts';
 import { Chat, UserProfile } from '../../types';
 import type { UserSearchResult as BaseUserSearchResult } from '../../types';
 

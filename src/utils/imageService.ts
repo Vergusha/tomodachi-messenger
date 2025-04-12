@@ -1,9 +1,6 @@
 import { updateDoc, doc } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { db } from '../firebase/firebaseConfig';
 import { supabase, AVATARS_BUCKET } from '../supabaseConfig';
-
-// Максимальный размер файла, 1MB
-const MAX_FILE_SIZE = 1024 * 1024;
 
 /**
  * Валидация файла изображения

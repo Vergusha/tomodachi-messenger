@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import { Close as CloseIcon, Person as PersonIcon } from '@mui/icons-material';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebase/config';
+import { db } from '../../firebase/firebaseConfig';
 import { UserProfile as UserProfileType } from '../../types';
 import { format, isToday, isYesterday } from 'date-fns';
 
