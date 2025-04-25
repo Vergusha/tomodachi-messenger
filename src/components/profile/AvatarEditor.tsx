@@ -126,7 +126,8 @@ const AvatarEditor = ({ open, onClose, onComplete }: AvatarEditorProps) => {
       
       // Обновляем профиль пользователя
       const publicUrl = URL.createObjectURL(processedImage);
-      await updateUserProfile(currentUser.displayName || '', publicUrl);
+      // Исправлено: передаём userId, displayName, photoURL
+      await updateUserProfile(currentUser.uid, currentUser.displayName || '', publicUrl);
       onComplete(publicUrl);
       onClose();
     } catch (err) {

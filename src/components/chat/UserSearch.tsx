@@ -54,8 +54,9 @@ export const UserSearch = ({ open, onClose }: UserSearchProps) => {
     try {
       setLoading(true);
       const chatId = await createOrGetChat(currentUser.uid, userId);
-      navigate(`/chat/${chatId}`);
+      // Исправлено: используем navigate('/') и onClose, чтобы не было некорректного роута
       onClose();
+      navigate('/');
     } catch (err) {
       console.error('Error starting chat:', err);
       setError('Не удалось начать чат');
@@ -130,4 +131,4 @@ export const UserSearch = ({ open, onClose }: UserSearchProps) => {
       </DialogContent>
     </Dialog>
   );
-}; 
+};

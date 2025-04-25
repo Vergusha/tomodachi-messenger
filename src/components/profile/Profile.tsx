@@ -71,16 +71,13 @@ const Profile = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!currentUser) return;
-    
     try {
       setError('');
       setSuccess('');
       setUpdating(true);
-      
-      await updateUserProfile(displayName);
-      
+      // Исправлено: передаём userId, displayName, undefined, bio
+      await updateUserProfile(currentUser.uid, displayName, undefined, bio);
       setSuccess('Profile updated successfully');
     } catch (err) {
       console.error('Error updating profile:', err);
@@ -95,8 +92,8 @@ const Profile = () => {
       setLoading(true);
       setError('');
       setSuccess('');
-      
-      await updateUserProfile(currentUser?.displayName || '', photoURL);
+      // Исправлено: передаём userId, displayName, photoURL
+      await updateUserProfile(currentUser?.uid || '', displayName, photoURL);
       setSuccess('Avatar updated successfully');
       setShowAvatarEditor(false);
     } catch (error) {

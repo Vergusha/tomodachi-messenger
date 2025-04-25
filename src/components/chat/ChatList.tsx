@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Box, List, Typography, IconButton, Tooltip } from '@mui/material';
-import { PersonSearch } from '@mui/icons-material';
+import PersonSearchOutlinedIcon from '@mui/icons-material/PersonSearchOutlined';
 import { UserSearch } from './UserSearch';
 // ... остальные импорты ...
 
@@ -21,7 +21,7 @@ export const ChatList = () => {
         <Typography variant="h6">Чаты</Typography>
         <Tooltip title="Найти пользователя">
           <IconButton onClick={() => setIsSearchOpen(true)}>
-            <PersonSearch />
+            <PersonSearchOutlinedIcon />
           </IconButton>
         </Tooltip>
       </Box>
@@ -34,4 +34,4 @@ export const ChatList = () => {
       />
     </Box>
   );
-}; 
+};
