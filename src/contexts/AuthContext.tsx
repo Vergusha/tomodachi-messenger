@@ -12,7 +12,7 @@ import {
   reauthenticateWithCredential
 } from 'firebase/auth';
 import { auth, db } from '../firebase/firebaseConfig';
-import { doc, setDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -163,6 +163,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return unsubscribe;
   }, []);
+
+  // --- ONLINE STATUS MANAGEMENT ---
+  useEffect(() => {
+    let isOnlineInterval: NodeJS.Timeout | null = null;
+    let visibilityHandler: (() => void) | null = null;
+    let beforeUnloadHandler: (() => void) | null = null;
+
+    async function setOnlineStatus(online: boolean) {
+      if (!auth.currentUser) return;
+      const userRef = doc(db, 'users', auth.currentUser.uid);
+      await updateDoc(userRef, {
+        isOnline: online,
+        ...(online ? {} : { lastSeen: new Date().toISOString() })
+      });
+    }
+
+    // Устанавливаем онлайн при входе и при фокусе вкладки
+    if (currentUser) {
+      setOnlineStatus(true);
+      // Периодически обновляем онлайн (например, каждые 60 секунд)
+      isOnlineInterval = setInterval(() => setOnlineStatus(true), 60000);
+      // При возврате на вкладку
+      visibilityHandler = () => {
+        if (document.visibilityState === 'visible') setOnlineStatus(true);
+      };
+      document.addEventListener('visibilitychange', visibilityHandler);
+      // При закрытии вкладки/уходе
+      beforeUnloadHandler = () => setOnlineStatus(false);
+      window.addEventListener('beforeunload', beforeUnloadHandler);
+    }
+    return () => {
+      if (isOnlineInterval) clearInterval(isOnlineInterval);
+      if (visibilityHandler) document.removeEventListener('visibilitychange', visibilityHandler);
+      if (beforeUnloadHandler) window.removeEventListener('beforeunload', beforeUnloadHandler);
+      // При размонтировании/выходе выставляем offline
+      setOnlineStatus(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.uid]);
 
   const value = {
     currentUser,
