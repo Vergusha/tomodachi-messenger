@@ -12,26 +12,48 @@ import {
   Tooltip,
   useTheme,
   useMediaQuery,
-  ListItemIcon
+  ListItemIcon,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Button
 } from '@mui/material';
 import {
   ExitToApp as LogoutIcon, 
   PersonOutline as ProfileIcon, 
   Brightness4 as DarkModeIcon,
   Brightness7 as LightModeIcon,
-  Notifications as NotificationIcon,
+
   Menu as MenuIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeContext } from '../../App';
+import qrCodeImg from '../../assets/qrcode.png';
 
 interface HeaderProps {
   openMobileMenu?: () => void;
 }
 
+const DonateQRCode = () => (
+  <Box sx={{ textAlign: 'center', p: 2 }}>
+    <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>Support via Vipps</Typography>
+    <a href="https://qr.vipps.no/box/cf28a56f-dc2b-46d6-99df-0e73c8b0b577/pay-in" target="_blank" rel="noopener noreferrer">
+      <img
+      src={qrCodeImg}
+      alt="QR code for donation via Vipps"
+      style={{ width: 192, height: 192, margin: '0 auto', display: 'block', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+      />
+    </a>
+    <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+      Scan with your camera or in the Vipps app
+    </Typography>
+  </Box>
+);
+
 const Header = ({ openMobileMenu }: HeaderProps) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [donateOpen, setDonateOpen] = useState(false);
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -105,6 +127,14 @@ const Header = ({ openMobileMenu }: HeaderProps) => {
         </Typography>
         
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Button
+            color="secondary"
+            variant="outlined"
+            sx={{ mr: { xs: 0.5, sm: 1 }, fontWeight: 500, borderRadius: 2, textTransform: 'none' }}
+            onClick={() => setDonateOpen(true)}
+          >
+            Support
+          </Button>
           <Tooltip title={`Switch to ${isDarkMode ? 'light' : 'dark'} mode`}>
             <IconButton 
               color="inherit" 
@@ -202,6 +232,12 @@ const Header = ({ openMobileMenu }: HeaderProps) => {
           </Menu>
         </Box>
       </Toolbar>
+      <Dialog open={donateOpen} onClose={() => setDonateOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ textAlign: 'center', fontWeight: 'bold' }}>Support the project</DialogTitle>
+        <DialogContent>
+          <DonateQRCode />
+        </DialogContent>
+      </Dialog>
     </AppBar>
   );
 };
