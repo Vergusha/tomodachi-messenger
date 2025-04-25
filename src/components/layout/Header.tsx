@@ -121,16 +121,7 @@ const Header = ({ openMobileMenu }: HeaderProps) => {
             </IconButton>
           </Tooltip>
 
-          {!isMobile && (
-            <Tooltip title="Notifications">
-              <IconButton 
-                color="inherit"
-                sx={{ mr: 1 }}
-              >
-                <NotificationIcon />
-              </IconButton>
-            </Tooltip>
-          )}
+          {/* Удалена кнопка уведомлений */}
 
           <IconButton 
             onClick={handleMenuOpen}
