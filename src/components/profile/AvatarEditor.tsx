@@ -15,7 +15,6 @@ import { Crop } from '@mui/icons-material';
 import RotateRightIcon from '@mui/icons-material/RotateRight';
 import { processImageForUpload, validateImageFile } from '../../utils/imageService';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase, AVATARS_BUCKET } from '../../supabaseConfig';
 import { updateUserProfile } from '../../lib/userService';
 import { Cropper } from 'react-cropper';
 import { PhotoCamera } from '@mui/icons-material';
@@ -125,37 +124,11 @@ const AvatarEditor = ({ open, onClose, onComplete }: AvatarEditorProps) => {
         aspectRatio: 1
       });
       
-      const filePath = `${currentUser.uid}/avatar.jpg`;
-      console.log('Uploading to path:', filePath);
-      
-      // Загружаем в Supabase Storage
-      const { data, error } = await supabase
-        .storage
-        .from(AVATARS_BUCKET)
-        .upload(filePath, processedImage, {
-          cacheControl: '3600',
-          upsert: true,
-          contentType: 'image/jpeg'
-        });
-      
-      if (error) {
-        console.error('Supabase upload error:', error);
-        throw new Error('Ошибка загрузки изображения: ' + error.message);
-      }
-      
-      // Получаем публичный URL
-      const { data: publicUrlData } = supabase
-        .storage
-        .from(AVATARS_BUCKET)
-        .getPublicUrl(filePath);
-      
-      if (publicUrlData?.publicUrl) {
-        await updateUserProfile(currentUser.displayName || '', publicUrlData.publicUrl);
-        onComplete(publicUrlData.publicUrl);
-        onClose();
-      } else {
-        throw new Error('Не удалось получить публичный URL изображения');
-      }
+      // Обновляем профиль пользователя
+      const publicUrl = URL.createObjectURL(processedImage);
+      await updateUserProfile(currentUser.displayName || '', publicUrl);
+      onComplete(publicUrl);
+      onClose();
     } catch (err) {
       console.error('Error saving avatar:', err);
       setError('Не удалось сохранить аватар. Пожалуйста, попробуйте снова.');

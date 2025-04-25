@@ -16,7 +16,6 @@
     "@firebase/firestore": "^4.7.10",
     "@mui/icons-material": "^7.0.2",
     "@mui/material": "^7.0.2",
-    "@supabase/supabase-js": "^2.49.4",
     "date-fns": "^4.1.0",
     "firebase": "^11.6.0",
     "react": "^19.0.0",

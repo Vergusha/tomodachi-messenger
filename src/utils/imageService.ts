@@ -1,6 +1,5 @@
 import { updateDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase/firebaseConfig';
-import { supabase, AVATARS_BUCKET } from '../supabaseConfig';
 
 /**
  * Image file validation
@@ -100,57 +99,3 @@ export const processImageForUpload = async (
     reader.readAsDataURL(file);
   });
 };
-
-/**
- * Загрузка изображения профиля на Supabase Storage
- */
-export const uploadProfileImage = async (userId: string, imageBlob: Blob): Promise<string> => {
-  try {
-    // Преобразуем Blob в File для загрузки
-    const file = new File([imageBlob], `avatar-${userId}-${Date.now()}.jpg`, { type: 'image/jpeg' });
-    
-    // Путь, по которому будет сохранено изображение - использование userId как директории
-    // для обеспечения разделения по пользователям и проверки доступа через RLS
-    const filePath = `${userId}/${file.name}`;
-    
-    // Загружаем файл в Supabase Storage
-    const { data, error } = await supabase
-      .storage
-      .from(AVATARS_BUCKET)
-      .upload(filePath, imageBlob, {
-        cacheControl: '3600',
-        upsert: true, // Заменять существующий файл
-        contentType: 'image/jpeg'
-      });
-    
-    if (error) {
-      console.error('Supabase upload error:', error);
-      throw new Error(`Ошибка загрузки: ${error.message}`);
-    }
-    
-    if (!data) {
-      throw new Error('Не удалось загрузить изображение');
-    }
-    
-    // Получаем публичный URL загруженного изображения
-    const { data: publicUrlData } = supabase
-      .storage
-      .from(AVATARS_BUCKET)
-      .getPublicUrl(data.path);
-    
-    if (!publicUrlData || !publicUrlData.publicUrl) {
-      throw new Error('Не удалось получить URL изображения');
-    }
-    
-    // Обновляем URL изображения в Firebase
-    await updateDoc(doc(db, 'users', userId), {
-      photoURL: publicUrlData.publicUrl
-    });
-    
-    return publicUrlData.publicUrl;
-    
-  } catch (error) {
-    console.error('Error uploading profile image:', error);
-    throw error;
-  }
-}

@@ -13,7 +13,6 @@ import {
 } from 'firebase/auth';
 import { auth, db } from '../firebase/firebaseConfig';
 import { doc, setDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { supabase, AVATARS_BUCKET } from '@/supabaseConfig';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -127,43 +126,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       await Promise.all(deletionPromises);
-      
-      // Delete user's profile images in Supabase Storage
-      try {
-        // Supabase storage has a different syntax for file deletion
-        const { error } = await supabase
-          .storage
-          .from(AVATARS_BUCKET)
-          .list(`${currentUser.uid}`);
-
-        if (error) {
-          console.error('Error searching files in Supabase:', error);
-        } else {
-          // Get list of files and delete them
-          const { data, error: listError } = await supabase
-            .storage
-            .from(AVATARS_BUCKET)
-            .list(`${currentUser.uid}`);
-            
-          if (listError) {
-            console.error('Error getting file list:', listError);
-          } else if (data && data.length > 0) {
-            const filesToRemove = data.map((file: { name: string }) => `${currentUser.uid}/${file.name}`);
-            
-            const { error: deleteError } = await supabase
-              .storage
-              .from(AVATARS_BUCKET)
-              .remove(filesToRemove);
-              
-            if (deleteError) {
-              console.error('Error deleting files:', deleteError);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error deleting user files:', error);
-        // Continue with account deletion even if storage deletion fails
-      }
       
       // Delete user document from Firestore
       await deleteDoc(doc(db, 'users', currentUser.uid));
