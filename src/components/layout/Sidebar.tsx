@@ -24,7 +24,7 @@ import {
   Chat as ChatIcon,
   PersonSearch as PersonSearchIcon
 } from '@mui/icons-material';
-import { collection, query, where, getDocs, limit, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig.ts';
 import { Chat, UserProfile } from '../../types';
 import type { UserSearchResult as BaseUserSearchResult } from '../../types';
@@ -64,147 +64,78 @@ const Sidebar = ({
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isDarkMode = theme.palette.mode === 'dark';
   
-  // Load user's chats
+  // Load user's chats (реалтайм)
   useEffect(() => {
-    const loadChats = async () => {
-      if (!currentUser) return;
-      
-      try {
-        setLoading(true);
-        
-        // Modified query: only filter by participants without ordering
-        const chatsQuery = query(
-          collection(db, 'chats'),
-          where('participants', 'array-contains', currentUser.uid)
-        );
-        
-        const querySnapshot = await getDocs(chatsQuery);
-        let chatsList: Chat[] = [];
-        const recipientIds = new Set<string>();
-        
-        querySnapshot.forEach((doc) => {
-          const chatData = doc.data() as Chat;
-          // Use spread first, then override id to ensure we use Firestore's document ID
-          chatsList.push({ ...chatData, id: doc.id });
-          
-          // Get recipient ID
-          const recipientId = chatData.participants.find(id => id !== currentUser.uid);
-          if (recipientId) recipientIds.add(recipientId);
-        });
-        
-        // Sort in memory instead of in the query
-        chatsList = chatsList.sort((a, b) => {
-          const timeA = a.updatedAt?.toDate?.() || new Date(a.updatedAt || 0);
-          const timeB = b.updatedAt?.toDate?.() || new Date(b.updatedAt || 0);
-          return timeB.getTime() - timeA.getTime();
-        });
-        
-        setChats(chatsList);
-        
-        // Fetch recipient user info
-        const recipientProfiles: Record<string, UserProfile> = {};
-        for (const id of recipientIds) {
-          const userDoc = await getDoc(doc(db, 'users', id));
+    if (!currentUser) return;
+    setLoading(true);
+    // Подписка на чаты
+    const chatsQuery = query(
+      collection(db, 'chats'),
+      where('participants', 'array-contains', currentUser.uid)
+    );
+    const unsubscribe = onSnapshot(chatsQuery, async (querySnapshot) => {
+      let chatsList: Chat[] = [];
+      const recipientIds = new Set<string>();
+      querySnapshot.forEach((doc) => {
+        const chatData = doc.data() as Chat;
+        chatsList.push({ ...chatData, id: doc.id });
+        const recipientId = chatData.participants.find(id => id !== currentUser.uid);
+        if (recipientId) recipientIds.add(recipientId);
+      });
+      chatsList = chatsList.sort((a, b) => {
+        const timeA = a.updatedAt?.toDate?.() || new Date(a.updatedAt || 0);
+        const timeB = b.updatedAt?.toDate?.() || new Date(b.updatedAt || 0);
+        return timeB.getTime() - timeA.getTime();
+      });
+      setChats(chatsList);
+      // Реалтайм подписка на пользователей
+      const unsubUsers: (() => void)[] = [];
+      const recipientProfiles: Record<string, UserProfile> = {};
+      for (const id of recipientIds) {
+        const userRef = doc(db, 'users', id);
+        const unsub = onSnapshot(userRef, (userDoc) => {
           if (userDoc.exists()) {
             recipientProfiles[id] = userDoc.data() as UserProfile;
+            setRecipientsInfo((prev) => ({ ...prev, [id]: userDoc.data() as UserProfile }));
           }
-        }
-        
-        setRecipientsInfo(recipientProfiles);
-      } catch (error) {
-        console.error('Error loading chats:', error);
-      } finally {
-        setLoading(false);
+        });
+        unsubUsers.push(unsub);
       }
-    };
-    
-    loadChats();
+      // setRecipientsInfo(recipientProfiles); // обновляется через onSnapshot
+      setLoading(false);
+      // Очистка подписок на пользователей
+      return () => { unsubUsers.forEach(unsub => unsub()); };
+    });
+    return () => unsubscribe();
   }, [currentUser]);
 
-  // Handle search for users by username
+  // Handle search for users by username (реалтайм)
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
-    
     setIsSearching(true);
-    
     try {
-      // Convert search query to lowercase to match storage format
       const normalizedQuery = searchQuery.toLowerCase();
-      
-      // Use a simpler query without orderBy to avoid indexing issues
       const usersQuery = query(
         collection(db, 'users'),
         where('username', '>=', normalizedQuery),
         limit(10)
       );
-      
-      const querySnapshot = await getDocs(usersQuery);
-      const results: UserSearchResult[] = [];
-      
-      // Filter results by partial username match
-      querySnapshot.forEach((doc) => {
-        const userData = doc.data();
-        
-        if (doc.id !== currentUser?.uid && 
-            userData.username.includes(normalizedQuery)) {
-          results.push({
-            uid: doc.id,
-            ...userData
-          } as UserSearchResult);
-        }
-      });
-      
-      // If no results, try searching by displayName
-      if (results.length === 0) {
-        const displayNameQuery = query(
-          collection(db, 'users'),
-          where('displayName', '>=', normalizedQuery),
-          limit(10)
-        );
-        
-        const displayNameSnapshot = await getDocs(displayNameQuery);
-        
-        displayNameSnapshot.forEach((doc) => {
+      // Реалтайм подписка на результаты поиска
+      const unsub = onSnapshot(usersQuery, (querySnapshot) => {
+        const results: UserSearchResult[] = [];
+        querySnapshot.forEach((doc) => {
           const userData = doc.data();
-          
-          // Check username or display name
-          if (doc.id !== currentUser?.uid && 
-              ((userData.displayName && 
-                userData.displayName.toLowerCase().includes(normalizedQuery)) || 
-               userData.username.includes(normalizedQuery))) {
-            
-            const alreadyAdded = results.some(r => r.uid === doc.id);
-            
-            if (!alreadyAdded) {
-              results.push({
-                uid: doc.id,
-                ...userData
-              } as UserSearchResult);
-            }
+          if (doc.id !== currentUser?.uid && userData.username.includes(normalizedQuery)) {
+            results.push({ uid: doc.id, ...userData } as UserSearchResult);
           }
         });
-      }
-      
-      // Sort results by relevance
-      results.sort((a, b) => {
-        if (a.isOnline && !b.isOnline) return -1;
-        if (!a.isOnline && b.isOnline) return 1;
-        
-        const aMatch = (a.username.toLowerCase().indexOf(normalizedQuery) >= 0) ? 
-                      a.username.toLowerCase().indexOf(normalizedQuery) : Infinity;
-        const bMatch = (b.username.toLowerCase().indexOf(normalizedQuery) >= 0) ? 
-                      b.username.toLowerCase().indexOf(normalizedQuery) : Infinity;
-        return aMatch - bMatch;
+        setSearchResults(results);
+        setIsSearching(false);
       });
-      
-      setSearchResults(results);
-      
-      if (results.length === 0) {
-        console.log('No results found for:', searchQuery);
-      }
+      // Если пользователь продолжит искать — отписка
+      return () => unsub();
     } catch (error) {
       console.error('Error searching users:', error);
-    } finally {
       setIsSearching(false);
     }
   };

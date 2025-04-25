@@ -11,7 +11,7 @@ import {
   Button
 } from '@mui/material';
 import { Close as CloseIcon, Person as PersonIcon } from '@mui/icons-material';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 import { UserProfile as UserProfileType } from '../../types';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -48,34 +48,25 @@ const UserProfile = ({ open, onClose, userId, onStartChat, isChatActive = false 
   const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
-    const fetchUser = async () => {
-      if (!userId) {
-        setLoading(false);
-        return;
-      }
-      
-      try {
-        setLoading(true);
+    if (!open || !userId) return;
+    setLoading(true);
+    setError(null);
+    // Реалтайм подписка на профиль пользователя
+    const userRef = doc(db, 'users', userId);
+    const unsubscribe = onSnapshot(userRef, (userDoc) => {
+      if (userDoc.exists()) {
+        setUser(userDoc.data() as UserProfileType);
         setError(null);
-        
-        const userDoc = await getDoc(doc(db, 'users', userId));
-        
-        if (userDoc.exists()) {
-          setUser(userDoc.data() as UserProfileType);
-        } else {
-          setError('User not found');
-        }
-      } catch (err) {
-        console.error('Error loading user data:', err);
-        setError('Failed to load user information');
-      } finally {
-        setLoading(false);
+      } else {
+        setUser(null);
+        setError('User not found');
       }
-    };
-    
-    if (open && userId) {
-      fetchUser();
-    }
+      setLoading(false);
+    }, (err) => {
+      setError('Failed to load user information');
+      setLoading(false);
+    });
+    return () => unsubscribe();
   }, [open, userId]);
   
   return (
