@@ -37,7 +37,7 @@ interface HeaderProps {
 
 const DonateQRCode = () => (
   <Box sx={{ textAlign: 'center', p: 2 }}>
-    <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>Support via Vipps</Typography>
+    <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>Premium access</Typography>
     <a href="https://qr.vipps.no/box/cf28a56f-dc2b-46d6-99df-0e73c8b0b577/pay-in" target="_blank" rel="noopener noreferrer">
       <img
       src={qrCodeImg}
@@ -233,7 +233,7 @@ const Header = ({ openMobileMenu }: HeaderProps) => {
         </Box>
       </Toolbar>
       <Dialog open={donateOpen} onClose={() => setDonateOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ textAlign: 'center', fontWeight: 'bold' }}>Support the project</DialogTitle>
+        <DialogTitle sx={{ textAlign: 'center', fontWeight: 'bold' }}> Get premium access</DialogTitle>
         <DialogContent>
           <DonateQRCode />
         </DialogContent>
