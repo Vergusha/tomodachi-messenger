@@ -133,7 +133,7 @@ const Header = ({ openMobileMenu }: HeaderProps) => {
             sx={{ mr: { xs: 0.5, sm: 1 }, fontWeight: 500, borderRadius: 2, textTransform: 'none' }}
             onClick={() => setDonateOpen(true)}
           >
-            Support
+            Premium Access
           </Button>
           <Tooltip title={`Switch to ${isDarkMode ? 'light' : 'dark'} mode`}>
             <IconButton 
