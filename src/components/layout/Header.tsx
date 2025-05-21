@@ -37,7 +37,7 @@ interface HeaderProps {
 
 const DonateQRCode = () => (
   <Box sx={{ textAlign: 'center', p: 2 }}>
-    <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>Premium access</Typography>
+    <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>Premium-tilgang + tidlig tilgang til forbedringer</Typography>
     <a href="https://qr.vipps.no/box/cf28a56f-dc2b-46d6-99df-0e73c8b0b577/pay-in" target="_blank" rel="noopener noreferrer">
       <img
       src={qrCodeImg}
